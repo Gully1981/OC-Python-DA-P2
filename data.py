@@ -22,8 +22,7 @@ mainproductgallery = soup.find("div", {"id": "product_gallery"})
 
 
 maintitlestring = mainhighlight.find("h1").string
-#pour passer des data en csv correctement, on doit en faire un tuple/liste
-maintitle = [maintitlestring]
+
 #ça peut aussi être .get_text() à la place de .string pour récupérer le texte
 
 #position du p dans la structure class product_page
