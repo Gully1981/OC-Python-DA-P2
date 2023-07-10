@@ -1,30 +1,37 @@
-import csv
-
 from bs4 import BeautifulSoup
-
 import requests
 
-url = "http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
+#créer un loop pour scraper toutes les pages
 
-#Extraire les données de l'url spécifique
-def extract_data(url):
-  response = requests.get(url)
-  soup = BeautifulSoup(response.content, 'html.parser')
-  return soup
+#root est utile si le site ne mentionne pas les liens en absolu pour le concaténer
+root = "http://books.toscrape.com"
 
-soup = extract_data(url)
+#trouver tous les urls sur la page principale qu'on va scraper
+#response1 = requests.get(root)
+#urltxt = response1.text
+#soup1 = BeautifulSoup(urltxt, 'html.parser')
+
+#récupérer les url dans une variable links pour les réutiliser pour la prochaine boucle pour lire les données qui sont dedans
+#for link in soup1.find_all("a"):
+ # links = link.get("href")
+
+#Pour scraper tous les liens contenus dans la page principale
+#for links in link:
+  #response = requests.get(f"{root}/{links}")
+  #content = response.text
+  #soup = BeautifulSoup(content, 'html.parser')
+
+#Pour faire un scrape d'une page précise
+response = requests.get("https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html")
+content = response.text
+soup = BeautifulSoup(content, 'html.parser')
 
 #Récupérer les éléments dans la page sur base des positions tableaux, classes etc
 #Définition des main elements pour récupérer les childs plus loin
 mainhighlight = soup.find(class_="product_main")
 mainproductpage = soup.find(class_="product_page")
 mainproductgallery = soup.find("div", {"id": "product_gallery"})
-
-
-maintitlestring = mainhighlight.find("h1").string
-
-
-#ça peut aussi être .get_text() à la place de .string pour récupérer le texte
+maintitlestring = mainhighlight.find("h1").string #ça peut aussi être .get_text() à la place de .string pour récupérer le texte
 
 #position du p dans la structure class product_page
 n = 1
@@ -36,10 +43,11 @@ for element in mainproductpage.select("p:nth-of-type("+str(n)+")"):
 
 #position du p dans la structure class product_page
 maintable = soup.find("table")
+maintd = soup.find("td")
 
+#récupérer les éléments dans le tableau
 tdupc = []
-#for element_upc in maintable.select("td:nth-of-type("+str(a)+")"):
-for element_upc in maintable.select("td:nth-child(n+1)"):
+for element_upc in maintd.contents:
   tdupc.append(element_upc.string)
 
 # récupérer src image
@@ -51,10 +59,11 @@ for source in imagethumb:
 
 
 #Afficher les données dans le terminal
-print(maintitle)
+print(maintitlestring)
 print(description)
 print(imagesource)
 print(tdupc)
+#print(links)
 
 #envoyer en csv
 
