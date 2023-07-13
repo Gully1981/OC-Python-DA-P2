@@ -33,6 +33,20 @@ mainproductpage = soup.find(class_="product_page")
 mainproductgallery = soup.find("div", {"id": "product_gallery"})
 maintitlestring = mainhighlight.find("h1").string #ça peut aussi être .get_text() à la place de .string pour récupérer le texte
 
+
+#Récupérer la classse où est stockée la valeur d'étoiles données
+mainreview = soup.find(class_="star-rating")
+
+if mainreview:
+  #lister toutes les classes inclues dans mainreview
+    classes = mainreview.get('class')
+    #s'il y en a plus de 2
+    if len(classes) >= 2:
+      #pointer vers la 2e classe
+        second_class = classes[1]
+    else:
+        second_class = "No review"
+
 #position du p dans la structure class product_page
 n = 1
 description = []
@@ -41,36 +55,31 @@ for element in mainproductpage.select("p:nth-of-type("+str(n)+")"):
   if element not in mainhighlight:
    description.append(element.string)
 
-#position du p dans la structure class product_page
-maintable = soup.find("table")
-maintd = soup.find("td")
 
-#récupérer les éléments dans le tableau
+#position des cellules d'un tableau
+maintable = soup.find("table")
+#définir une variable pour récupérer tous les td du tableau
+maintd = soup.find_all("td")
+
+
+#récupérer les éléments dans le tableau avec une boucle for pour les prendre 1 à 1
 tdupc = []
-for element_upc in maintd.contents:
-  tdupc.append(element_upc.string)
+for element_td in maintd:
+  tdupc.append(element_td.string)
+
 
 # récupérer src image
 imagethumb = soup.find_all("img")
 for source in imagethumb:
   imagesource = source["src"]
-#position des td dans la structure table et récupérer le contenu pour l'afficher
-#n déjà défini plus haut
 
-
-#Afficher les données dans le terminal
-print(maintitlestring)
-print(description)
-print(imagesource)
-print(tdupc)
-#print(links)
 
 #envoyer en csv
 
 import csv
 
 headers = ["titre","description","image url","upc","category","price excl","price incl","stock","review"]
-rows = [maintitlestring, description, imagesource, tdupc]
+rows = [maintitlestring, description[0], imagesource, tdupc[0],tdupc[1],tdupc[3],tdupc[4],tdupc[6],second_class]
 
 with open("Devaux_Sandra_2_data_072023.csv", "w") as fichier:
   writer = csv.writer(fichier)
