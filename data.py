@@ -7,24 +7,29 @@ import requests
 root = "http://books.toscrape.com"
 
 #trouver tous les urls sur la page principale qu'on va scraper
-#response1 = requests.get(root)
-#urltxt = response1.text
-#soup1 = BeautifulSoup(urltxt, 'html.parser')
+response1 = requests.get(root)
+urltxt = response1.text
+soup1 = BeautifulSoup(urltxt, 'html.parser')
 
 #récupérer les url dans une variable links pour les réutiliser pour la prochaine boucle pour lire les données qui sont dedans
-#for link in soup1.find_all("a"):
- # links = link.get("href")
+urllinks = []
+for link in soup1.find_all("a"):
+  href = link.get("href")
+  if href is not None and href.startswith("catalogue") and not href.startswith("catalogue/page") and not href.startswith("catalogue/category"):
+    urllinks.append(href)
+
 
 #Pour scraper tous les liens contenus dans la page principale
-#for links in link:
-  #response = requests.get(f"{root}/{links}")
-  #content = response.text
-  #soup = BeautifulSoup(content, 'html.parser')
+for urllink in urllinks:
+  if urllink is not None:
+    response = requests.get(f"{root}/{urllink}")
+    content = response.text
+    soup = BeautifulSoup(content, 'html.parser')
 
 #Pour faire un scrape d'une page précise
-response = requests.get("https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html")
-content = response.text
-soup = BeautifulSoup(content, 'html.parser')
+#response = requests.get("https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html")
+#content = response.text
+#soup = BeautifulSoup(content, 'html.parser')
 
 #Récupérer les éléments dans la page sur base des positions tableaux, classes etc
 #Définition des main elements pour récupérer les childs plus loin
