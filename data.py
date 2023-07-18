@@ -6,78 +6,103 @@ import requests
 #root est utile si le site ne mentionne pas les liens en absolu pour le concaténer
 root = "http://books.toscrape.com"
 
-#trouver tous les urls sur la page principale qu'on va scraper
+#scraper tous les urls sur la page principale qu'on va scraper
 response1 = requests.get(root)
 urltxt = response1.text
 soup1 = BeautifulSoup(urltxt, 'html.parser')
 
-#récupérer les url dans une variable links pour les réutiliser pour la prochaine boucle pour lire les données qui sont dedans
-urllinks = []
-for link in soup1.find_all("a"):
-  href = link.get("href")
-  if href is not None and href.startswith("catalogue") and not href.startswith("catalogue/page") and not href.startswith("catalogue/category"):
-    urllinks.append(href)
+
+#récupérer les urls des catégories
+category_links = []
+main_categoryblock = soup1.find(class_="side_categories")
+for category_link in main_categoryblock.select('a[href^="catalogue/category/books/"]'):
+  href = category_link.get("href")
+  category_links.append(href)
 
 
-#Pour scraper tous les liens contenus dans la page principale
-for urllink in urllinks:
-  if urllink is not None:
-    response = requests.get(f"{root}/{urllink}")
+#scraper chaque page reprise dans la liste category_links qui reprend tous les liens des catégories récupérées dans la boucle précédente
+
+books_in_category = []
+
+for category_element in category_links:
+    response = requests.get(f"{root}/{category_element}")
     content = response.text
     soup = BeautifulSoup(content, 'html.parser')
 
-#Pour faire un scrape d'une page précise
-#response = requests.get("https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html")
-#content = response.text
-#soup = BeautifulSoup(content, 'html.parser')
+    #mettre la variable dans la boucle pour qu'il récupère l'élément à chaque livre
+    main_bookblock = soup1.find("section")
+    sub_bookblock = main_bookblock.find_all("article", {"class": "product_pod"})
 
-#Récupérer les éléments dans la page sur base des positions tableaux, classes etc
-#Définition des main elements pour récupérer les childs plus loin
-mainhighlight = soup.find(class_="product_main")
-mainproductpage = soup.find(class_="product_page")
-mainproductgallery = soup.find("div", {"id": "product_gallery"})
-maintitlestring = mainhighlight.find("h1").string #ça peut aussi être .get_text() à la place de .string pour récupérer le texte
+    # récupérer les urls des livres contenus dans chaque catégorie dans la boucle précédente
+    for book_article in sub_bookblock:
+      book_link = book_article.find("a")
+      href = book_link.get("href")
+      if href is not None:
+        books_in_category.append(href)
 
+#scraper chaque livre repris dans la boucle précédente
+books_details =[]
+for book_element in books_in_category:
+  if book_element is not None:
+    response2 = requests.get(f"{root}/{book_element}")
+    content2 = response2.text
+    soup2 = BeautifulSoup(content2, 'html.parser')
 
-#Récupérer la classse où est stockée la valeur d'étoiles données
-mainreview = soup.find(class_="star-rating")
+  # Récupérer les éléments dans chaque page de livre sur base des positions tableaux, classes etc
+    #Définition des main elements pour récupérer les childs plus loin
+    mainhighlight = soup2.find(class_="product_main")
+    mainproductpage = soup2.find(class_="product_page")
+    mainproductgallery = soup2.find("div", {"id": "product_gallery"})
+    maintitlestring = mainhighlight.find("h1").string #ça peut aussi être .get_text() à la place de .string pour récupérer le texte
 
-if mainreview:
-  #lister toutes les classes inclues dans mainreview
-    classes = mainreview.get('class')
-    #s'il y en a plus de 2
-    if len(classes) >= 2:
-      #pointer vers la 2e classe
-        second_class = classes[1]
-    else:
-        second_class = "No review"
+    #Récupérer la classse où est stockée la valeur d'étoiles données
+    mainreview = soup2.find(class_="star-rating")
+    if mainreview:
+      #lister toutes les classes inclues dans mainreview
+        classes = mainreview.get('class')
+        #s'il y en a plus de 2
+        if len(classes) >= 2:
+          #pointer vers la 2e classe
+            second_class = classes[1]
+        else:
+            second_class = "No review"
 
-#position du p dans la structure class product_page
-n = 1
-description = []
-for element in mainproductpage.select("p:nth-of-type("+str(n)+")"):
-  #exclure le p qui est dans la div product_main en position 1 également
-  if element not in mainhighlight:
-   description.append(element.string)
+    #position du p dans la structure class product_page
+    n = 1
+    description = []
+    for element in mainproductpage.select("p:nth-of-type("+str(n)+")"):
+      #exclure le p qui est dans la div product_main en position 1 également
+      if element not in mainhighlight:
+       description.append(element.string)
+      else:
+        description.append("NA")
 
+    #position des cellules d'un tableau
+    maintable = soup2.find("table")
+    #définir une variable pour récupérer tous les td du tableau
+    maintd = soup2.find_all("td")
 
-#position des cellules d'un tableau
-maintable = soup.find("table")
-#définir une variable pour récupérer tous les td du tableau
-maintd = soup.find_all("td")
+    #récupérer les éléments dans le tableau avec une boucle for pour les prendre 1 à 1
+    tdupc = []
+    for element_td in maintd:
+      tdupc.append(element_td.string)
 
+    # récupérer src image
+    imagethumb = soup2.find_all("img")
+    for source in imagethumb:
+      imagesource = source["src"]
 
-#récupérer les éléments dans le tableau avec une boucle for pour les prendre 1 à 1
-tdupc = []
-for element_td in maintd:
-  tdupc.append(element_td.string)
-
-
-# récupérer src image
-imagethumb = soup.find_all("img")
-for source in imagethumb:
-  imagesource = source["src"]
-
+  books_details.append({
+    "titre": maintitlestring,
+    "description": description[0],
+    "image url": imagesource,
+    "upc": tdupc[0],
+    "category": tdupc[1],
+    "price excl": tdupc[3],
+    "price incl": tdupc[4],
+    "stock": tdupc[6],
+    "review": second_class,
+  })
 
 #envoyer en csv
 
@@ -93,35 +118,3 @@ with open("Devaux_Sandra_2_data_072023.csv", "w") as fichier:
 
    #définit les lignes de contenu
   writer.writerow(rows)
-
-
-  #essais
-
-  # products = []
-  # def get_allinfo_table(soup, products):
-  # for table in soup.find_all("table"):
-  #  for tr in table.find_all("tr")[1:]:
-  #   td = tr.find_all("td")
-  #  upc = td[0].get_text()
-  #     product_type = td[1].get_text()
-  #     price_excl = td[2].get_text()
-  #     price_incl = td[3].get_text()
-  #     stock = td[5].get_text()
-  #     reviews = td[6].get_text()
-  #     product = {
-  #       "upc": upc,
-  #       "product type": product_type,
-  #       "prix excl": price_excl,
-  #       "prix incl": price_incl,
-  #       "stock": stock,
-  #       "reviews": reviews
-  #     }
-  #     products.append(product)
-
-#def load_data(soup,products):
- # headers = ["upc","product type","prix excl","prix incl","stock","review"]
-  #with open(f"{title}.csv",mode="w", newline="") as file:
-   # writer = csv.DictWriter(file, fieldnames=headers)
-    #writer.writeheader()
-    #for product in products:
-     # writer.writerow(product)
