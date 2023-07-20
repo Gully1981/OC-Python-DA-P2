@@ -1,10 +1,22 @@
 from bs4 import BeautifulSoup
 import requests
+#initialiser import csv pour avoir 1 csv par catégorie avant de démarrer le loop des livres
+import csv
+#parser l'url pour récupérer une partie précise
+from urllib.parse import urlparse
+# permettre la lecture des url pour télécharger les images des livres
+import urllib.request
+#gestion des erreurs en cas d'urls 404
+import urllib.error
+# permettre la création de folders par catégorie pour stocker les images
+import os
+#nettoyer les alt des images pour supprimer les accents et autres caractères spéciaux qui bloquent le download des images
+import re
 
-#créer un loop pour scraper toutes les pages
+##créer un loop pour scraper toutes les pages
 
 #root est utile si le site ne mentionne pas les liens en absolu pour le concaténer
-root = "http://books.toscrape.com"
+root = "https://books.toscrape.com"
 
 #scraper tous les urls sur la page principale qu'on va scraper
 response1 = requests.get(root)
@@ -24,11 +36,6 @@ for category_link in main_categoryblock.select('a[href^="catalogue/category/book
 
 books_in_category = []
 
-#initialiser import csv pour avoir 1 csv par catégorie avant de démarrer le loop des livres
-import csv
-#parser l'url pour récupérer une partie précise
-from urllib.parse import urlparse
-
 for category_element in category_links:
     response = requests.get(f"{root}/{category_element}")
     content = response.text
@@ -37,6 +44,10 @@ for category_element in category_links:
     #Pour récupérer la catégorie seule dans l'url repris dans category_element - nécessaire pour le nom du fichier csv par cat.
     parsed_url = urlparse(category_element)
     category_name = parsed_url.path.split("/")[-2]
+
+    #créer un folder par catégorie pour stocker les images (import os fait avant d'entrer dans cette boucle)
+    folder_name = f"images/{category_name}"
+    os.makedirs(folder_name, exist_ok=True)
 
     #trouver les paginations pour avoir le nombre total de pages à scraper + if condition pour ne pas appliquer s'il n'y en a pas
     num_pages = 1
@@ -66,6 +77,7 @@ for category_element in category_links:
 
     #scraper chaque livre repris dans la boucle précédente
     books_details =[]
+
     for book_element in books_in_category:
       if book_element is not None:
         response2 = requests.get(f"{root}/{book_element}")
@@ -118,8 +130,25 @@ for category_element in category_links:
 
         # récupérer src image
         imagethumb = soup2.find_all("img")
+
         for source in imagethumb:
           imagesource = source["src"]
+
+          #télécharger les images
+           #récupérer l'url absolu
+          imageshorturl = imagesource.replace("../../", "")
+          image_urlabsolu = f"{root}/{imageshorturl}"
+           #pour renommer l'image avec l'alt en supprimant les espaces
+          image_alt = source.get("alt","").replace(" ","")
+          def sanitize_image_alt(image_alt):
+            #supprimer les caractères spéciaux avec import re
+            return re.sub(r"[^\w\-_\.\']","_", image_alt)
+          #définir le path de chaque image par le nom du dossier par catégorie défini plus haut + nom image
+          image_path = os.path.join(folder_name, f"{image_alt}.jpg")
+           #pour enregistrer l'image
+          response4 = urllib.request.urlopen(image_urlabsolu)
+          with open(image_path, "wb") as f:
+              f.write(response4.read())
 
       books_details.append({
         "titre": maintitlestring,
@@ -155,3 +184,4 @@ for category_element in category_links:
         ]
         #définit les lignes de contenu
         writer.writerow(rows)
+
